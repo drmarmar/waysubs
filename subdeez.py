@@ -18,17 +18,21 @@ argparser = argparse.ArgumentParser("OSINT Pounder")
 argparser.add_argument("-d", type=str,
                        help='Domain to scan', required=True, dest="domain")
 argparser.add_argument("-n",
-                       help="No subdomains", required=False, action='store_true', dest="noSubs")
+                       help="Specify no subdomains", required=False, action='store_true', dest="noSubs")
 args = argparser.parse_args()
 domain = args.domain
 noSubs = args.noSubs
 
 
 def ccindexes():
-    url = "https://index.commoncrawl.org/collinfo.json"
-    data = requests.get(url).text
-    indexes = json.load(data)
-    print(indexes)
+    indexUrl = "https://index.commoncrawl.org/collinfo.json"
+    data = requests.get(indexUrl).text
+    indexes = json.loads(data)
+    # print(indexes)
+    indexList = []
+    for p in indexes:
+        indexList.append(p['id'])
+    return list(set(indexList))
 
 
 def urlExtraction(ccEntries):
@@ -46,6 +50,9 @@ def urlExtraction(ccEntries):
         print("No URLs found.. Git good.")
         sys.exit()
     return list(set(ccurls))
+
+
+# def multiCommonCrawlURLS(host, noSubs):
 
 
 def commonCrawlURLS(host, noSubs):
@@ -97,7 +104,7 @@ def main():
     # Send to Wayback
     waybackurls(domain, noSubs)
     commonCrawlURLS(domain, noSubs)
-    ccindexes()
+    print(ccindexes())
 
 
 if __name__ == '__main__':
