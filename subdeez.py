@@ -10,7 +10,6 @@ import pathlib
 #import utils.colors as c
 
 # Todo: add multiprocessing to run against a domains.txt list.
-# Add otxurls function.
 # Add httprobe function to determine if url is reachable.
 # Also try to add aquatone? with a --path flag in argparse.
 
