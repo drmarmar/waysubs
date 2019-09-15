@@ -125,11 +125,9 @@ def commonCrawlURLS(host, noSubs, index):
     else:
         url = 'http://index.commoncrawl.org/%s-index?url=%s%s/*&output=json'.format() % (index, wildcard, host)
     r = requests.get(url)
-
     blah = r.text.split('\n')[:-1]
     ccEntries.append(blah)
     links = urlExtraction(ccEntries)
-
     writeCCrawl(links, 'ccrawl.txt', index)
 
     #print(ccEntries)
