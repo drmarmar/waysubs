@@ -43,13 +43,26 @@ def getCrtsh(domain):
     try:
         results = [ sub['name_value'] for sub in arrayData]
         # Write results to dictionary to remove duplicates. Dictionaries can't have duplicates.
-        results =list(dict.fromkeys(results))
+        results = list(dict.fromkeys(results))
         # Eventually instead of writing all files, I want to put all subdomains in the same array and convert to
         # dictionary to remove duplicates. So I would be returning the results array to other functions.
-        writeCrtsh(results, 'crtsh.txt')
+        writeSubdomain(results, 'crtsh.txt')
     except:
         pass
     print(results)
+
+def getDnsBufferoverrun(domain):
+    url = "https://dns.bufferover.run/dns?q=.%s".format() % (domain)
+    data = requests.get(url)
+    data = data.json()["FDNS_A"]
+    try:
+        # split by comma and take 2nd value, which is the subdomain.
+        results = [ sub.split(',')[1] for sub in data ]
+        results = list(dict.fromkeys(results))
+        #print(results)
+        writeSubdomain(results, 'DnsBuffer.txt')
+    except Exception as e:
+        print(e)
 
 
 def getStatusCode():
@@ -159,7 +172,7 @@ def writeCCrawl(links, filename, index):
     print("Completed {0}".format(index))
 
 
-def writeCrtsh(content, filename):
+def writeSubdomain(content, filename):
     file = open(filename, 'w')
     for i in content:
         file.write(i + '\n')
@@ -178,7 +191,7 @@ def cleanDupes(filename, newFilename):
 def main():
     # Find subdomains
     getCrtsh(domain)
-
+    getDnsBufferoverrun(domain)
     # Send to Wayback
     waybackurls(domain, noSubs)
     ccIndexesMP()

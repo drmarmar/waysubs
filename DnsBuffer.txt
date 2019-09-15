@@ -1,0 +1,8 @@
+lf1.tevora.com
+aws1.tevora.com
+secure.tevora.com
+blog.tevora.com
+portal.tevora.com
+webmail.tevora.com
+threat.tevora.com
+www.tevora.com
