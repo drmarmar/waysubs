@@ -2,39 +2,84 @@
 # http://index.commoncrawl.org/CC-MAIN-2018-22-index?url=%s%s/*&output=json
 
 import multiprocessing as mp
-import sys
 import json
 import requests
 import argparse
-import os.path
-from os import path
+import pathlib
+#import http.client
+#import utils.colors as c
 
 # Todo: add multiprocessing to run against a domains.txt list.
-# Add commoncrawl and otxurls function.
+# Add otxurls function.
 # Add httprobe function to determine if url is reachable.
 # Also try to add aquatone? with a --path flag in argparse.
 
 # 8/20 added index extraction for all indexes... need to add multiprocessing for urlextraction on all indexes....
 
 argparser = argparse.ArgumentParser("OSINT Pounder")
-argparser.add_argument("-d", type=str,
+argparser.add_argument("-d", "--domain", type=str,
                        help='Domain to scan', required=True, dest="domain")
-argparser.add_argument("-n",
+argparser.add_argument("-n", "--no-subs",
                        help="Specify no subdomains", required=False, action='store_true', dest="noSubs")
 args = argparser.parse_args()
 domain = args.domain
 noSubs = args.noSubs
 
 
-def ccindexes():
-    indexUrl = "https://index.commoncrawl.org/collinfo.json"
-    data = requests.get(indexUrl).text
-    indexes = json.loads(data)
-    # print(indexes)
-    indexList = []
-    for p in indexes:
-        indexList.append(p['id'])
-    return list(set(indexList))
+def print_banner(arg = ""):
+    banner_top = '''
+    #insert ascii art here
+    '''
+    banner  = '''#.... more ascii art if necessary
+    '''
+    print("\n\n")
+    print(c.fg.red + c.bold + banner_top + banner + c.reset + "\n\n\n")
+
+
+def getCrtsh(domain):
+    #https://crt.sh/?q=%%25.%s&output=json
+    url = "https://crt.sh/?q=%%25.%s&output=json".format() % (domain)
+    data = requests.get(url).text
+    arrayData = json.loads(data)
+    try:
+        results = [ sub['name_value'] for sub in arrayData]
+        # Write results to dictionary to remove duplicates. Dictionaries can't have duplicates.
+        results =list(dict.fromkeys(results))
+        # Eventually instead of writing all files, I want to put all subdomains in the same array and convert to
+        # dictionary to remove duplicates. So I would be returning the results array to other functions.
+        writeCrtsh(results, 'crtsh.txt')
+    except:
+        pass
+
+    print(results)
+
+
+def getStatusCode():
+    # This will print only the status code (200) of requests. Make an if statement to only print a range of acceptable
+    # status codes. Add these codes to another list for reachable urls. Maybe add an option to specify what ports to request.
+    # Take input from waybackurls and ccrawl. Parse only the domains/subdomains of the results. Get request http/https those entries.
+    # For now, request the URLs found as is. We can add functionality for only requesting subdomains later.
+
+    #conn = http.client.HTTPConnection(site, timeout=2)
+    #conn.request("Get", "/")
+    #response = conn.getresponse()
+    myFile = open("waybackurls.txt")
+    for line in myFile:
+        try:
+#            pool = mp.Pool(mp.cpu_count())
+#            threads = []
+#            proc = pool.apply_async(requests.head(line))
+#            threads.append(proc)
+#            for proc in threads:
+#               proc.get()
+######  Need to figure out multithreading here. Maybe make a class/function for multithreading?
+            proc = requests.head(line)
+            print(proc.status_code)
+            if proc.status_code != 404:
+                print("This site works: " + line)
+                # add site to an array and check if its empty at the end of the requests.
+        except:
+            pass
 
 
 def urlExtraction(ccEntries):
@@ -48,10 +93,10 @@ def urlExtraction(ccEntries):
             except ValueError as e:
                 # When server fails and no valid json response?
                 pass
-    #if len(ccurls) == 0:
-    #    print("No URLs found.. Git good.")
-    #    sys.exit()
+
     return list(set(ccurls))
+    # Dict didn't matter to clean dupes because its processed on multiple workers. Still need to use cleanDupes().
+    # return list(dict.fromkeys(ccurls))
 
 
 def ccIndexesMP():
@@ -74,8 +119,6 @@ def ccIndexesMP():
 
 def commonCrawlURLS(host, noSubs, index):
     ccEntries = []
-    #print("Working {0}".format(index))
-
     wildcard = "*."
     if noSubs:
         wildcard = ""
@@ -90,6 +133,8 @@ def commonCrawlURLS(host, noSubs, index):
 
     writeCCrawl(links, 'ccrawl.txt', index)
 
+    #print(ccEntries)
+
 
 def waybackurls(host, noSubs):
     if noSubs:
@@ -100,6 +145,7 @@ def waybackurls(host, noSubs):
     results = r.json()
     # Return everything except the 'original' first string.
     results = results[1:]
+    # No need to clean wayback output because it's already uniq with no duplicates.
     writeWaybackurls(results, 'waybackurls.txt')
 
 
@@ -116,20 +162,34 @@ def writeCCrawl(links, filename, index):
         file.write(link)
     print("Completed {0}".format(index))
 
+
+def writeCrtsh(content, filename):
+    file = open(filename, 'w')
+    for i in content:
+        file.write(i + '\n')
+    file.close()
+
+
 def cleanDupes(filename, newFilename):
     with open(filename) as result:
         uniqlines = set(result.readlines())
         with open(newFilename, 'w') as rmdup:
             rmdup.writelines(set(uniqlines))
+    path = pathlib.Path(filename)
+    path.unlink()
+
 
 def main():
+    # Find subdomains
+    getCrtsh(domain)
+
     # Send to Wayback
     waybackurls(domain, noSubs)
-    #commonCrawlURLS(domain, noSubs)
-    #print(ccindexes())
     ccIndexesMP()
     cleanDupes('ccrawl.txt','ccrawl-uniq.txt')
-    #cleanDupes('waybackurls.txt', 'wayback-uniq.txt')
+
+    #getStatusCode()
+
 
 if __name__ == '__main__':
     main()
