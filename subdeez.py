@@ -50,7 +50,6 @@ def getCrtsh(domain):
         writeCrtsh(results, 'crtsh.txt')
     except:
         pass
-
     print(results)
 
 
