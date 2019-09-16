@@ -49,7 +49,7 @@ def getCrtsh(domain):
         writeSubdomain(results, 'crtsh.txt')
     except:
         pass
-    print(results)
+
 
 def getDnsBufferoverrun(domain):
     url = "https://dns.bufferover.run/dns?q=.%s".format() % (domain)
@@ -61,8 +61,38 @@ def getDnsBufferoverrun(domain):
         results = list(dict.fromkeys(results))
         #print(results)
         writeSubdomain(results, 'DnsBuffer.txt')
+    except:
+        pass
+
+
+def getCertspotter(domain):
+    # https://certspotter.com/api/v0/certs?domain=%s
+    # or maybe through api https://api.certspotter.com/v1/issuances?domain=tevora.com&include_subdomains=true&expand=dns_names
+    # 1000 queries / hr with free api key.
+    url = requests.get("https://certspotter.com/api/v0/certs?domain=%s".format() % (domain))
+    arrayData = json.loads(url.text)
+    '''for i in arrayData:
+        #cleaned = "\n".join(x['dns_names'] for x in arrayData)
+        #print(cleaned)
+        # This works, but prints only the first entry from the array... it should be fine tho. Sometimes it'll have an 
+        # entry with the wildcard '*.' tho. Need to clean up these entries in the last subdomain dict in the end.
+        print(i["dns_names"][0])'''
+    try:
+        results = [ sub['dns_names'][0] for sub in arrayData]
+        #results = list(dict.fromkeys(results))
+        #print(results)
+        # Still need to clean up the duplicates!!
+        writeSubdomain(results, 'certspotter.txt')
     except Exception as e:
         print(e)
+
+
+def getSubdomains(domain):
+    # make this call all subdomain request functions.
+    #getCrtsh(domain)
+    #getDnsBufferoverrun(domain)
+    #getCertspotter(domain)
+    url = ""
 
 
 def getStatusCode():
@@ -192,6 +222,7 @@ def main():
     # Find subdomains
     getCrtsh(domain)
     getDnsBufferoverrun(domain)
+    getCertspotter(domain)
     # Send to Wayback
     waybackurls(domain, noSubs)
     ccIndexesMP()
