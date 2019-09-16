@@ -79,9 +79,8 @@ def getCertspotter(domain):
         print(i["dns_names"][0])'''
     try:
         results = [ sub['dns_names'][0] for sub in arrayData]
-        #results = list(dict.fromkeys(results))
-        #print(results)
-        # Still need to clean up the duplicates!!
+        # conversion to dict removes duplicates.
+        results = list(dict.fromkeys(results))
         writeSubdomain(results, 'certspotter.txt')
     except Exception as e:
         print(e)
