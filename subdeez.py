@@ -24,6 +24,7 @@ args = argparser.parse_args()
 domain = args.domain
 noSubs = args.noSubs
 
+subdomains = set()
 
 def print_banner(arg = ""):
     banner_top = '''
@@ -41,11 +42,17 @@ def getCrtsh(domain):
     data = json.loads(url)
     try:
         results = [ sub['name_value'] for sub in data]
-        # Write results to dictionary to remove duplicates. Dictionaries can't have duplicates.
-        results = list(dict.fromkeys(results))
+        # Write results to dictionary to remove duplicates. Dicts can't have duplicates. Writing to set instead.
+        results = set(results)
+        #results = list(dict.fromkeys(results))
+
         # Eventually instead of writing all files, I want to put all subdomains in the same array and convert to
         # dictionary to remove duplicates. So I would be returning the results array to other functions.
-        writeSubdomain(results, 'crtsh.txt')
+        # Can also remove duplicates using set()!!
+        #writeSubdomain(results, 'output/crtsh.txt')
+        #subdomains.add(results)
+        for i in results:
+            subdomains.add(i)
     except:
         pass
 
@@ -56,9 +63,12 @@ def getDnsBufferoverrun(domain):
     try:
         # split by comma and take 2nd value, which is the subdomain.
         results = [ sub.split(',')[1] for sub in data ]
-        results = list(dict.fromkeys(results))
-        #print(results)
-        writeSubdomain(results, 'DnsBuffer.txt')
+        #results = list(dict.fromkeys(results))
+        results = set(results)
+        #writeSubdomain(results, 'output/DnsBuffer.txt')
+        #subdomains.add(results)
+        for i in results:
+            subdomains.add(i)
     except:
         pass
 
@@ -72,9 +82,12 @@ def getCertspotter(domain):
     try:
         results = [ sub['dns_names'][0] for sub in arrayData]
         # conversion to dict removes duplicates.
-        results = list(dict.fromkeys(results))
+        #results = list(dict.fromkeys(results))
+        results = set(results)
         # Still has some wildcard entries... need to clean these up in the last subdomain dict.
-        writeSubdomain(results, 'certspotter.txt')
+        #writeSubdomain(results, 'output/certspotter.txt')
+        for i in results:
+            subdomains.add(i)
     except Exception as e:
         print(e)
 
@@ -85,8 +98,11 @@ def getThreatcrowd(domain):
     data = url.json()['subdomains']
     try:
         results = [ sub.split(',')[0] for sub in data]
-        results = list(dict.fromkeys(results))
-        writeSubdomain(results, 'threatcrowd.txt')
+        #results = list(dict.fromkeys(results))
+        results = set(results)
+        #writeSubdomain(results, 'output/threatcrowd.txt')
+        for i in results:
+            subdomains.add(i)
     except Exception as e:
         print(e)
 
@@ -95,21 +111,31 @@ def getHackertarget(domain):
     url = requests.get("https://api.hackertarget.com/hostsearch/?q=%s".format() % (domain)).text.splitlines()
     try:
         results = [ sub.split(',')[0] for sub in url]
-        results = list(dict.fromkeys(results))
-        writeSubdomain(results, 'hackertarget.txt')
+        #results = list(dict.fromkeys(results))
+        results = set(results)
+        #print(results)
+        #writeSubdomain(results, 'output/hackertarget.txt')
+        for i in results:
+            subdomains.add(i)
+        #print(subdomains)
     except Exception as e:
         print(e)
 
 
 def getSubdomains(domain):
     # make this call all subdomain request functions.
-    '''getCrtsh(domain)
+    getCrtsh(domain)
     getDnsBufferoverrun(domain)
     getCertspotter(domain)
     getThreatcrowd(domain)
-    getHackertarget(domain)'''
-    url = ""
+    getHackertarget(domain)
 
+    # Remove dupes from subdomains global set. This set will be used for wayback and ccurls.
+    global subdomains
+    subdomains = set(subdomains)
+    for sub in subdomains:
+        print(sub)
+    writeSubdomain(subdomains, 'output/subdomains.txt')
 
 def getStatusCode():
     # This will print only the status code (200) of requests. Make an if statement to only print a range of acceptable
@@ -187,8 +213,7 @@ def commonCrawlURLS(host, noSubs, index):
     ccEntries.append(blah)
     links = urlExtraction(ccEntries)
     writeCCrawl(links, 'ccrawl.txt', index)
-
-    #print(ccEntries)
+    # IMPLEMENT SET TO CLEAN DUPES INSTEAD OF USING CLEANDUPES()
 
 
 def waybackurls(host, noSubs):
@@ -219,6 +244,7 @@ def writeCCrawl(links, filename, index):
 
 
 def writeSubdomain(content, filename):
+    pathlib.Path('./output').mkdir(parents=False, exist_ok=True)
     file = open(filename, 'w')
     for i in content:
         file.write(i + '\n')
@@ -236,11 +262,7 @@ def cleanDupes(filename, newFilename):
 
 def main():
     # Find subdomains
-    #getCrtsh(domain)
-    #getDnsBufferoverrun(domain)
-    #getCertspotter(domain)
-    #getThreatcrowd(domain)
-    getHackertarget(domain)
+    getSubdomains(domain)
 
     # Send to Wayback
     '''waybackurls(domain, noSubs)
