@@ -37,11 +37,10 @@ def print_banner(arg = ""):
 
 def getCrtsh(domain):
     #https://crt.sh/?q=%%25.%s&output=json
-    url = "https://crt.sh/?q=%%25.%s&output=json".format() % (domain)
-    data = requests.get(url).text
-    arrayData = json.loads(data)
+    url = requests.get("https://crt.sh/?q=%%25.%s&output=json".format() % (domain)).text
+    data = json.loads(url)
     try:
-        results = [ sub['name_value'] for sub in arrayData]
+        results = [ sub['name_value'] for sub in data]
         # Write results to dictionary to remove duplicates. Dictionaries can't have duplicates.
         results = list(dict.fromkeys(results))
         # Eventually instead of writing all files, I want to put all subdomains in the same array and convert to
@@ -52,9 +51,8 @@ def getCrtsh(domain):
 
 
 def getDnsBufferoverrun(domain):
-    url = "https://dns.bufferover.run/dns?q=.%s".format() % (domain)
-    data = requests.get(url)
-    data = data.json()["FDNS_A"]
+    url = requests.get("https://dns.bufferover.run/dns?q=.%s".format() % (domain))
+    data = url.json()["FDNS_A"]
     try:
         # split by comma and take 2nd value, which is the subdomain.
         results = [ sub.split(',')[1] for sub in data ]
@@ -71,19 +69,27 @@ def getCertspotter(domain):
     # 1000 queries / hr with free api key.
     url = requests.get("https://certspotter.com/api/v0/certs?domain=%s".format() % (domain))
     arrayData = json.loads(url.text)
-    '''for i in arrayData:
-        #cleaned = "\n".join(x['dns_names'] for x in arrayData)
-        #print(cleaned)
-        # This works, but prints only the first entry from the array... it should be fine tho. Sometimes it'll have an 
-        # entry with the wildcard '*.' tho. Need to clean up these entries in the last subdomain dict in the end.
-        print(i["dns_names"][0])'''
     try:
         results = [ sub['dns_names'][0] for sub in arrayData]
         # conversion to dict removes duplicates.
         results = list(dict.fromkeys(results))
+        # Still has some wildcard entries... need to clean these up in the last subdomain dict.
         writeSubdomain(results, 'certspotter.txt')
     except Exception as e:
         print(e)
+
+
+def getThreatcrowd(domain):
+    # https://www.threatcrowd.org/searchApi/v2/domain/report/?domain=%s
+    url = requests.get("https://www.threatcrowd.org/searchApi/v2/domain/report/?domain=%s".format() % (domain))
+    data = url.json()['subdomains']
+    try:
+        results = [ sub.split(',')[0] for sub in data]
+        results = list(dict.fromkeys(results))
+        writeSubdomain(results, 'threatcrowd.txt')
+    except Exception as e:
+        print(e)
+
 
 
 def getSubdomains(domain):
@@ -219,13 +225,15 @@ def cleanDupes(filename, newFilename):
 
 def main():
     # Find subdomains
-    getCrtsh(domain)
-    getDnsBufferoverrun(domain)
-    getCertspotter(domain)
+    #getCrtsh(domain)
+    #getDnsBufferoverrun(domain)
+    #getCertspotter(domain)
+    getThreatcrowd(domain)
+
     # Send to Wayback
-    waybackurls(domain, noSubs)
+    '''waybackurls(domain, noSubs)
     ccIndexesMP()
-    cleanDupes('ccrawl.txt','ccrawl-uniq.txt')
+    cleanDupes('ccrawl.txt','ccrawl-uniq.txt')'''
 
     #getStatusCode()
 
