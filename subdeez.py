@@ -49,7 +49,7 @@ def getCrtsh(domain):
         # Eventually instead of writing all files, I want to put all subdomains in the same array and convert to
         # dictionary to remove duplicates. So I would be returning the results array to other functions.
         # Can also remove duplicates using set()!!
-        #writeSubdomain(results, 'output/crtsh.txt')
+        #writeSubdomain(results, 'output/' + domain + '-crtsh.txt')
         #subdomains.add(results)
         for i in results:
             subdomains.add(i)
@@ -65,7 +65,7 @@ def getDnsBufferoverrun(domain):
         results = [ sub.split(',')[1] for sub in data ]
         #results = list(dict.fromkeys(results))
         results = set(results)
-        #writeSubdomain(results, 'output/DnsBuffer.txt')
+        #writeSubdomain(results, 'output/' + domain + '-DnsBuffer.txt')
         #subdomains.add(results)
         for i in results:
             subdomains.add(i)
@@ -85,7 +85,7 @@ def getCertspotter(domain):
         #results = list(dict.fromkeys(results))
         results = set(results)
         # Still has some wildcard entries... need to clean these up in the last subdomain dict.
-        #writeSubdomain(results, 'output/certspotter.txt')
+        #writeSubdomain(results, 'output/' + domain + '-certspotter.txt')
         for i in results:
             subdomains.add(i)
     except Exception as e:
@@ -100,7 +100,7 @@ def getThreatcrowd(domain):
         results = [ sub.split(',')[0] for sub in data]
         #results = list(dict.fromkeys(results))
         results = set(results)
-        #writeSubdomain(results, 'output/threatcrowd.txt')
+        #writeSubdomain(results, 'output/' + domain + '-threatcrowd.txt')
         for i in results:
             subdomains.add(i)
     except Exception as e:
@@ -114,7 +114,7 @@ def getHackertarget(domain):
         #results = list(dict.fromkeys(results))
         results = set(results)
         #print(results)
-        #writeSubdomain(results, 'output/hackertarget.txt')
+        #writeSubdomain(results, 'output/' + domain + '-hackertarget.txt')
         for i in results:
             subdomains.add(i)
         #print(subdomains)
@@ -135,7 +135,7 @@ def getSubdomains(domain):
     subdomains = set(subdomains)
     for sub in subdomains:
         print(sub)
-    writeSubdomain(subdomains, 'output/subdomains.txt')
+    writeSubdomain(subdomains, 'output/' + domain + '-subdomains.txt')
 
 def getStatusCode():
     # This will print only the status code (200) of requests. Make an if statement to only print a range of acceptable
