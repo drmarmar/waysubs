@@ -91,12 +91,23 @@ def getThreatcrowd(domain):
         print(e)
 
 
+def getHackertarget(domain):
+    url = requests.get("https://api.hackertarget.com/hostsearch/?q=%s".format() % (domain)).text.splitlines()
+    try:
+        results = [ sub.split(',')[0] for sub in url]
+        results = list(dict.fromkeys(results))
+        writeSubdomain(results, 'hackertarget.txt')
+    except Exception as e:
+        print(e)
+
 
 def getSubdomains(domain):
     # make this call all subdomain request functions.
-    #getCrtsh(domain)
-    #getDnsBufferoverrun(domain)
-    #getCertspotter(domain)
+    '''getCrtsh(domain)
+    getDnsBufferoverrun(domain)
+    getCertspotter(domain)
+    getThreatcrowd(domain)
+    getHackertarget(domain)'''
     url = ""
 
 
@@ -228,7 +239,8 @@ def main():
     #getCrtsh(domain)
     #getDnsBufferoverrun(domain)
     #getCertspotter(domain)
-    getThreatcrowd(domain)
+    #getThreatcrowd(domain)
+    getHackertarget(domain)
 
     # Send to Wayback
     '''waybackurls(domain, noSubs)
