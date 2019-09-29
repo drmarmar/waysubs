@@ -9,24 +9,25 @@ import pathlib
 #import http.client
 #import utils.colors as c
 
-# Todo: add multiprocessing to run against a domains.txt list.
-# Add httprobe function to determine if url is reachable.
-# Also try to add aquatone? with a --path flag in argparse.
-
-# 8/20 added index extraction for all indexes... need to add multiprocessing for urlextraction on all indexes....
 
 argparser = argparse.ArgumentParser("OSINT Pounder")
 argparser.add_argument("-d", "--domain", type=str,
                        help='Domain to scan', required=True, dest="domain")
 argparser.add_argument("-n", "--no-subs",
                        help="Specify no subdomains", required=False, action='store_true', dest="noSubs")
+argparser.add_argument("-w", "--wayback", help="Search waybackurls for specified domain", required=False, action="store_true")
+argparser.add_argument("-c", "--crawl", help="Search through CcrawlUrls for specified domain", required=False, action="store_true")
+
 args = argparser.parse_args()
 domain = args.domain
 noSubs = args.noSubs
+wayback = args.wayback
+ccrawl = args.crawl
 
 subdomains = set()
 
 def print_banner(arg = ""):
+    # todo...
     banner_top = '''
     #insert ascii art here
     '''
@@ -42,15 +43,7 @@ def getCrtsh(domain):
     data = json.loads(url)
     try:
         results = [ sub['name_value'] for sub in data]
-        # Write results to dictionary to remove duplicates. Dicts can't have duplicates. Writing to set instead.
         results = set(results)
-        #results = list(dict.fromkeys(results))
-
-        # Eventually instead of writing all files, I want to put all subdomains in the same array and convert to
-        # dictionary to remove duplicates. So I would be returning the results array to other functions.
-        # Can also remove duplicates using set()!!
-        #writeSubdomain(results, 'output/' + domain + '-crtsh.txt')
-        #subdomains.add(results)
         for i in results:
             subdomains.add(i)
     except:
@@ -63,10 +56,7 @@ def getDnsBufferoverrun(domain):
     try:
         # split by comma and take 2nd value, which is the subdomain.
         results = [ sub.split(',')[1] for sub in data ]
-        #results = list(dict.fromkeys(results))
         results = set(results)
-        #writeSubdomain(results, 'output/' + domain + '-DnsBuffer.txt')
-        #subdomains.add(results)
         for i in results:
             subdomains.add(i)
     except:
@@ -75,17 +65,11 @@ def getDnsBufferoverrun(domain):
 
 def getCertspotter(domain):
     # https://certspotter.com/api/v0/certs?domain=%s
-    # or maybe through api https://api.certspotter.com/v1/issuances?domain=tevora.com&include_subdomains=true&expand=dns_names
-    # 1000 queries / hr with free api key.
     url = requests.get("https://certspotter.com/api/v0/certs?domain=%s".format() % (domain))
     arrayData = json.loads(url.text)
     try:
         results = [ sub['dns_names'][0] for sub in arrayData]
-        # conversion to dict removes duplicates.
-        #results = list(dict.fromkeys(results))
         results = set(results)
-        # Still has some wildcard entries... need to clean these up in the last subdomain dict.
-        #writeSubdomain(results, 'output/' + domain + '-certspotter.txt')
         for i in results:
             subdomains.add(i)
     except Exception as e:
@@ -98,9 +82,7 @@ def getThreatcrowd(domain):
     data = url.json()['subdomains']
     try:
         results = [ sub.split(',')[0] for sub in data]
-        #results = list(dict.fromkeys(results))
         results = set(results)
-        #writeSubdomain(results, 'output/' + domain + '-threatcrowd.txt')
         for i in results:
             subdomains.add(i)
     except Exception as e:
@@ -111,10 +93,7 @@ def getHackertarget(domain):
     url = requests.get("https://api.hackertarget.com/hostsearch/?q=%s".format() % (domain)).text.splitlines()
     try:
         results = [ sub.split(',')[0] for sub in url]
-        #results = list(dict.fromkeys(results))
         results = set(results)
-        #print(results)
-        #writeSubdomain(results, 'output/' + domain + '-hackertarget.txt')
         for i in results:
             subdomains.add(i)
         #print(subdomains)
@@ -137,33 +116,6 @@ def getSubdomains(domain):
         print(sub)
     writeSubdomain(subdomains, 'output/' + domain + '-subdomains.txt')
 
-def getStatusCode():
-    # This will print only the status code (200) of requests. Make an if statement to only print a range of acceptable
-    # status codes. Add these codes to another list for reachable urls. Maybe add an option to specify what ports to request.
-    # Take input from waybackurls and ccrawl. Parse only the domains/subdomains of the results. Get request http/https those entries.
-    # For now, request the URLs found as is. We can add functionality for only requesting subdomains later.
-
-    #conn = http.client.HTTPConnection(site, timeout=2)
-    #conn.request("Get", "/")
-    #response = conn.getresponse()
-    myFile = open("waybackurls.txt")
-    for line in myFile:
-        try:
-#            pool = mp.Pool(mp.cpu_count())
-#            threads = []
-#            proc = pool.apply_async(requests.head(line))
-#            threads.append(proc)
-#            for proc in threads:
-#               proc.get()
-######  Need to figure out multithreading here. Maybe make a class/function for multithreading?
-            proc = requests.head(line)
-            print(proc.status_code)
-            if proc.status_code != 404:
-                print("This site works: " + line)
-                # add site to an array and check if its empty at the end of the requests.
-        except:
-            pass
-
 
 def urlExtraction(ccEntries):
     ccurls = []
@@ -174,30 +126,30 @@ def urlExtraction(ccEntries):
                 url = url.strip()
                 ccurls.append(url + '\n')
             except ValueError as e:
-                # When server fails and no valid json response?
                 pass
 
     return list(set(ccurls))
-    # Dict didn't matter to clean dupes because its processed on multiple workers. Still need to use cleanDupes().
-    # return list(dict.fromkeys(ccurls))
 
 
-def ccIndexesMP():
-    indexUrl = "https://index.commoncrawl.org/collinfo.json"
-    data = requests.get(indexUrl).text
-    indexes = json.loads(data)
-    indexList = []
-    for p in indexes:
-        indexList.append(p['id'])
-    #print(indexList)
-    print("Let's see.. you have %s CPUs... Use them all? Okay..." % mp.cpu_count())
-    pool = mp.Pool(mp.cpu_count())
-    threads = []
-    for entry in indexList:
-        proc = pool.apply_async(commonCrawlURLS, (domain, noSubs, entry))
-        threads.append(proc)
-    for proc in threads:
-        proc.get()
+def ccIndexesMP(ccrawl):
+    if ccrawl == True:
+        indexUrl = "https://index.commoncrawl.org/collinfo.json"
+        data = requests.get(indexUrl).text
+        indexes = json.loads(data)
+        indexList = []
+        for p in indexes:
+            indexList.append(p['id'])
+        print("Let's see.. you have %s CPUs... Use them all? Okay..." % mp.cpu_count())
+        pool = mp.Pool(mp.cpu_count())
+        threads = []
+        for entry in indexList:
+            proc = pool.apply_async(commonCrawlURLS, (domain, noSubs, entry))
+            threads.append(proc)
+        for proc in threads:
+            proc.get()
+        cleanDupes('output/' + domain + '-ccrawl.txt', 'output/' + domain + '-ccrawl-uniq.txt')
+    else:
+        pass
 
 
 def commonCrawlURLS(host, noSubs, index):
@@ -212,24 +164,27 @@ def commonCrawlURLS(host, noSubs, index):
     blah = r.text.split('\n')[:-1]
     ccEntries.append(blah)
     links = urlExtraction(ccEntries)
-    writeCCrawl(links, 'ccrawl.txt', index)
-    # IMPLEMENT SET TO CLEAN DUPES INSTEAD OF USING CLEANDUPES()
+    writeCCrawl(links, 'output/' + domain + '-ccrawl.txt', index)
 
 
-def waybackurls(host, noSubs):
-    if noSubs:
-        url = 'http://web.archive.org/cdx/search/cdx?url=%s/*&output=json&fl=original&collapse=urlkey'.format() % host
+def waybackurls(host, noSubs, wayback):
+    if wayback == True:
+        if noSubs:
+            url = 'http://web.archive.org/cdx/search/cdx?url=%s/*&output=json&fl=original&collapse=urlkey'.format() % host
+        else:
+            url = 'http://web.archive.org/cdx/search/cdx?url=*.%s/*&output=json&fl=original&collapse=urlkey'.format() % host
+        r = requests.get(url)
+        results = r.json()
+        # Return everything except the 'original' first string.
+        results = results[1:]
+        # No need to clean wayback output because it's already uniq with no duplicates.
+        writeWaybackurls(results, 'output/' + domain + '-waybackurls.txt')
     else:
-        url = 'http://web.archive.org/cdx/search/cdx?url=*.%s/*&output=json&fl=original&collapse=urlkey'.format() % host
-    r = requests.get(url)
-    results = r.json()
-    # Return everything except the 'original' first string.
-    results = results[1:]
-    # No need to clean wayback output because it's already uniq with no duplicates.
-    writeWaybackurls(results, 'waybackurls.txt')
+        pass
 
 
 def writeWaybackurls(content, filename):
+    pathlib.Path('./output').mkdir(parents=False, exist_ok=True)
     file = open(filename, 'w')
     for i in content[:]:
         print(*i, sep='[]', file=file)
@@ -237,6 +192,7 @@ def writeWaybackurls(content, filename):
 
 
 def writeCCrawl(links, filename, index):
+    pathlib.Path('./output').mkdir(parents=False, exist_ok=True)
     file = open(filename, 'a+')
     for link in links:
         file.write(link)
@@ -252,6 +208,7 @@ def writeSubdomain(content, filename):
 
 
 def cleanDupes(filename, newFilename):
+    pathlib.Path('./output').mkdir(parents=False, exist_ok=True)
     with open(filename) as result:
         uniqlines = set(result.readlines())
         with open(newFilename, 'w') as rmdup:
@@ -265,11 +222,8 @@ def main():
     getSubdomains(domain)
 
     # Send to Wayback
-    '''waybackurls(domain, noSubs)
-    ccIndexesMP()
-    cleanDupes('ccrawl.txt','ccrawl-uniq.txt')'''
-
-    #getStatusCode()
+    waybackurls(domain, noSubs, wayback)
+    ccIndexesMP(ccrawl)
 
 
 if __name__ == '__main__':
