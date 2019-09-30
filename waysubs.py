@@ -22,8 +22,6 @@ wayback = args.wayback
 ccrawl = args.crawl
 
 subdomains = set()
-ccrawlset = set()
-waybackset = set()
 
 def print_banner(arg = ""):
     # todo...
