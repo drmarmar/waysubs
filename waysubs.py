@@ -1,6 +1,3 @@
-# http: // web.archive.org/cdx/search/cdx?url = %s % s/* & output = json & collapse = urlkey
-# http://index.commoncrawl.org/CC-MAIN-2018-22-index?url=%s%s/*&output=json
-
 import multiprocessing as mp
 import json
 import requests
@@ -25,6 +22,8 @@ wayback = args.wayback
 ccrawl = args.crawl
 
 subdomains = set()
+ccrawlset = set()
+waybackset = set()
 
 def print_banner(arg = ""):
     # todo...
@@ -96,7 +95,6 @@ def getHackertarget(domain):
         results = set(results)
         for i in results:
             subdomains.add(i)
-        #print(subdomains)
     except Exception as e:
         print(e)
 
@@ -220,7 +218,6 @@ def cleanDupes(filename, newFilename):
 def main():
     # Find subdomains
     getSubdomains(domain)
-
     # Send to Wayback
     waybackurls(domain, noSubs, wayback)
     ccIndexesMP(ccrawl)
